@@ -12,10 +12,8 @@ let DUMMY_PLACES = [
 		address: "20 W 34th St, New York, NY 10001, USA",
 		creator: "u1",
 		location: {
-			coordinates: {
-				lat: 40.748817,
-				lng: -73.985428,
-			},
+			lat: 40.748817,
+			lng: -73.985428,
 		},
 	},
 	{
@@ -27,13 +25,13 @@ let DUMMY_PLACES = [
 		address: "Liberty Island, New York, NY 10004, USA",
 		creator: "u2",
 		location: {
-			coordinates: {
-				lat: 40.689247,
-				lng: -74.044502,
-			},
+			lat: 40.689247,
+			lng: -74.044502,
 		},
 	},
 ];
+
+const getCoordsForAddress = require("../util/location").getCoordsForAddress;
 
 const getAllPlaces = (req, res, next) => {
 	res.json({ DUMMY_PLACES });
@@ -61,13 +59,21 @@ const getPlacesByUserId = (req, res, next) => {
 	res.json({ places: userPlaces });
 };
 
-const createPlace = (req, res, next) => {
+const createPlace = async (req, res, next) => {
 	const errors = validationResult(req);
 	if (!errors.isEmpty()) {
-		return next(new HttpError("Invalid inputs passed, please check your data.", 422));
+		next(new HttpError("Invalid inputs passed, please check your data.", 422));
 	}
 
-	const { title, description, coordinates, address, creator } = req.body;
+	const { title, description, address, creator } = req.body;
+
+	let coordinates;
+	try {
+		coordinates = await getCoordsForAddress(address);
+	} catch (error) {
+		return next(error);
+	}
+
 	const newPlace = {
 		/* id: uuid.v4(), */
 		id: Math.random().toString(),

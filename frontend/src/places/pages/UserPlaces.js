@@ -12,10 +12,8 @@ const DUMMY_PLACES = [
     address: "20 W 34th St, New York, NY 10001, USA",
     creator: "u1",
     location: {
-      coordinates: {
-        lat: 40.748817,
-        lng: -73.985428,
-      },
+      lat: 40.748817,
+      lng: -73.985428,
     },
   },
   {
@@ -27,10 +25,8 @@ const DUMMY_PLACES = [
     address: "Liberty Island, New York, NY 10004, USA",
     creator: "u2",
     location: {
-      coordinates: {
-        lat: 40.689247,
-        lng: -74.044502,
-      },
+      lat: 40.689247,
+      lng: -74.044502,
     },
   },
 ];
