@@ -2,61 +2,56 @@ const HttpError = require("../models/http-error");
 /* const uuid = require("uuid"); */
 const { validationResult } = require("express-validator");
 
-let DUMMY_PLACES = [
-	{
-		id: "p1",
-		title: "Empire State Building",
-		description: "One of the most famous skyscrapers in the world.",
-		imageUrl:
-			"https://upload.wikimedia.org/wikipedia/commons/c/c7/Empire_State_Building_from_the_Top_of_the_Rock.jpg",
-		address: "20 W 34th St, New York, NY 10001, USA",
-		creator: "u1",
-		location: {
-			lat: 40.748817,
-			lng: -73.985428,
-		},
-	},
-	{
-		id: "p2",
-		title: "Statue of Liberty",
-		description: "A colossal neoclassical sculpture on Liberty Island.",
-		imageUrl:
-			"https://upload.wikimedia.org/wikipedia/commons/3/3d/Front_view_of_Statue_of_Liberty_with_pedestal_and_base_2024.jpg",
-		address: "Liberty Island, New York, NY 10004, USA",
-		creator: "u2",
-		location: {
-			lat: 40.689247,
-			lng: -74.044502,
-		},
-	},
-];
+const Place = require("../models/place");
+const User = require("../models/user");
+const mongoose = require("mongoose");
 
 const getCoordsForAddress = require("../util/location").getCoordsForAddress;
 
-const getAllPlaces = (req, res, next) => {
-	res.json({ DUMMY_PLACES });
-};
-
-const getPlaceById = (req, res, next) => {
-	const placeId = req.params.placeId;
-	const place = DUMMY_PLACES.find(p => p.id === placeId);
-
-	if (!place) {
-		return next(new HttpError("Place not found", 404));
+const getAllPlaces = async (req, res, next) => {
+	let places;
+	try {
+		places = await Place.find();
+		if (!places) {
+			return next(new HttpError("Places not found", 404));
+		}
+	} catch (err) {
+		return next(new HttpError("Fetching places failed, please try again later.", 500));
 	}
 
-	res.json({ place });
+	res.json({ places: places.map(place => place.toObject({ getters: true })) });
 };
 
-const getPlacesByUserId = (req, res, next) => {
+const getPlaceById = async (req, res, next) => {
+	const placeId = req.params.placeId;
+
+	let place;
+	try {
+		place = await Place.findById(placeId);
+		if (!place) {
+			return next(new HttpError("Place not found", 404));
+		}
+	} catch (err) {
+		return next(new HttpError("Fetching place failed, please try again later.", 500));
+	}
+
+	res.json({ place: place.toObject({ getters: true }) });
+};
+
+const getPlacesByUserId = async (req, res, next) => {
 	const userId = req.params.uid;
-	const userPlaces = DUMMY_PLACES.filter(p => p.creator === userId);
+	let userPlaces;
+	try {
+		userPlaces = await Place.find({ creator: userId });
+	} catch (err) {
+		return next(new HttpError("Fetching places failed, please try again later.", 500));
+	}
 
 	if (userPlaces.length === 0) {
 		return next(new HttpError("No places found for this user", 404));
 	}
 
-	res.json({ places: userPlaces });
+	res.json({ places: userPlaces.map(place => place.toObject({ getters: true })) });
 };
 
 const createPlace = async (req, res, next) => {
@@ -74,20 +69,40 @@ const createPlace = async (req, res, next) => {
 		return next(error);
 	}
 
-	const newPlace = {
-		/* id: uuid.v4(), */
-		id: Math.random().toString(),
+	const createdPlace = new Place({
 		title,
 		description,
+		imageUrl: "https://placehold.co/600x400", // Placeholder image URL
 		address,
-		creator,
 		location: coordinates,
-	};
-	DUMMY_PLACES.push(newPlace);
-	res.status(201).json({ place: newPlace });
+		creator,
+	});
+
+	let user;
+
+	try {
+		user = await User.findById(creator);
+		if (!user) {
+			return next(new HttpError("Could not find user for provided id.", 404));
+		}
+	} catch (err) {
+		return next(new HttpError("Creating place failed, please try again later.", 500));
+	}
+
+	try {
+		const session = await mongoose.startSession();
+		session.startTransaction();
+		await createdPlace.save({ session });
+		user.places.push(createdPlace);
+		await user.save({ session });
+		await session.commitTransaction();
+	} catch (err) {
+		return next(new HttpError(err.message, 500));
+	}
+	res.status(201).json({ place: createdPlace.toObject({ getters: true }) });
 };
 
-const updatePlace = (req, res, next) => {
+const updatePlace = async (req, res, next) => {
 	const errors = validationResult(req);
 	if (!errors.isEmpty()) {
 		return next(new HttpError("Invalid inputs passed, please check your data.", 422));
@@ -95,18 +110,44 @@ const updatePlace = (req, res, next) => {
 
 	const { title, description } = req.body;
 	const placeId = req.params.placeId;
-	const placeIndex = DUMMY_PLACES.findIndex(p => p.id === placeId);
-	if (placeIndex === -1) {
-		return next(new HttpError("Place not found", 404));
+	let updatedPlace;
+	try {
+		updatedPlace = await Place.findById(placeId);
+		if (!updatedPlace) {
+			return next(new HttpError("Place not found", 404));
+		}
+		updatedPlace.title = title;
+		updatedPlace.description = description;
+		updatedPlace.save();
+	} catch (err) {
+		return next(new HttpError("Updating place failed, please try again later.", 500));
 	}
-	const updatedPlace = { ...DUMMY_PLACES[placeIndex], title, description };
-	DUMMY_PLACES[placeIndex] = updatedPlace;
-	res.status(200).json({ place: updatedPlace });
+	updatedPlace = updatedPlace.toObject({ getters: true });
+	res.status(200).json({ place: updatedPlace.toObject({ getters: true }) });
 };
 
-const deletePlace = (req, res, next) => {
+const deletePlace = async (req, res, next) => {
 	const placeId = req.params.placeId;
-	DUMMY_PLACES = DUMMY_PLACES.filter(p => p.id !== placeId);
+	let place;
+	try {
+		place = await Place.findById(placeId).populate("creator");
+		if (!place) {
+			return next(new HttpError("Place not found", 404));
+		}
+	} catch (err) {
+		return next(new HttpError("Deleting place failed, please try again later.", 500));
+	}
+
+	try {
+		const session = await mongoose.startSession();
+		session.startTransaction();
+		await place.remove({ session });
+		place.creator.places.pull(place);
+		await place.creator.save({ session });
+		await session.commitTransaction();
+	} catch (err) {
+		return next(new HttpError("Deleting place failed, please try again later.", 500));
+	}
 	res.status(200).json({ message: "Place deleted" });
 };
 

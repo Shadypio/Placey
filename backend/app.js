@@ -1,5 +1,6 @@
 const express = require("express");
 const bodyParser = require("body-parser");
+const mongoose = require("mongoose");
 
 const placesRoutes = require("./routes/places-routes");
 const usersRoutes = require("./routes/users-routes");
@@ -25,6 +26,13 @@ app.use((error, req, res, next) => {
 	res.status(error.code || 500).json({ message: error.message || "An unknown error occurred!" });
 });
 
-app.listen(5000, () => {
-	console.log("Server is running on port 5000");
-});
+mongoose
+	.connect(process.env.MONGODB_URI)
+	.then(() => {
+		app.listen(process.env.PORT || 5000, () => {
+			console.log(`Server is running on port ${process.env.PORT || 5000}`);
+		});
+	})
+	.catch(err => {
+		console.error("Database connection failed:", err);
+	});
