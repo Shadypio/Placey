@@ -10,10 +10,14 @@ import {
   VALIDATOR_REQUIRE,
 } from "../../shared/util/validators";
 import { AuthContext } from "../../shared/context/auth-context";
+import ErrorModal from "../../shared/components/UIElements/ErrorModal";
+import LoadingSpinner from "../../shared/components/UIElements/LoadingSpinner";
+import { useHttpClient } from "../../shared/hooks/http-hook";
 
 const Auth = () => {
   const auth = useContext(AuthContext);
   const [isLoginMode, setIsLoginMode] = useState(true);
+  const { isLoading, error, sendRequest, clearError } = useHttpClient();
   const [formState, inputHandler, setFormData] = useForm(
     {
       email: {
@@ -27,14 +31,6 @@ const Auth = () => {
     },
     false,
   );
-
-  const authSubmitHandler = (event) => {
-    event.preventDefault();
-    if (!formState.isValid) {
-      return;
-    }
-    auth.login();
-  };
 
   const switchModeHandler = () => {
     if (!isLoginMode) {
@@ -60,8 +56,55 @@ const Auth = () => {
     setIsLoginMode((prevMode) => !prevMode);
   };
 
+  const authSubmitHandler = async (event) => {
+    console.log("Handler called with event:", event);
+
+    if (!event || !event.preventDefault) {
+      console.log("No event or preventDefault - returning early");
+      return;
+    }
+
+    event.preventDefault();
+
+    console.log("Form is valid:", formState.isValid);
+    console.log("Is login mode:", isLoginMode);
+
+    if (!formState.isValid) {
+      console.log("Form is invalid - returning");
+      return;
+    }
+    if (isLoginMode) {
+      try {
+        const responseData = await sendRequest("/users/login", "POST", {
+          email: formState.inputs.email.value,
+          password: formState.inputs.password.value,
+        });
+
+        auth.login(responseData.user.id);
+      } catch (err) {
+        console.error(err);
+        return;
+      }
+    } else {
+      try {
+        await sendRequest("/users/signup", "POST", {
+          name: formState.inputs.name.value,
+          email: formState.inputs.email.value,
+          password: formState.inputs.password.value,
+        });
+
+        auth.login();
+      } catch (err) {
+        console.error(err);
+        return;
+      }
+    }
+  };
+
   return (
     <Card className="authentication">
+      {isLoading && <LoadingSpinner asOverlay />}
+      {error && <ErrorModal error={error} onClear={() => clearError()} />}
       <h2>Login Required</h2>
       <hr />
       <form onSubmit={authSubmitHandler}>
@@ -97,7 +140,7 @@ const Auth = () => {
         <Button type="submit" disabled={!formState.isValid}>
           {isLoginMode ? "LOGIN" : "SIGNUP"}
         </Button>
-        <Button inverse onClick={switchModeHandler}>
+        <Button inverse onClick={() => switchModeHandler()}>
           SWITCH TO {isLoginMode ? "SIGNUP" : "LOGIN"}
         </Button>
       </form>

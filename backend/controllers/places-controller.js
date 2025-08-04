@@ -47,9 +47,9 @@ const getPlacesByUserId = async (req, res, next) => {
 		return next(new HttpError("Fetching places failed, please try again later.", 500));
 	}
 
-	if (userPlaces.length === 0) {
+	/* if (userPlaces.length === 0) {
 		return next(new HttpError("No places found for this user", 404));
-	}
+	} */
 
 	res.json({ places: userPlaces.map(place => place.toObject({ getters: true })) });
 };
@@ -123,12 +123,13 @@ const updatePlace = async (req, res, next) => {
 		return next(new HttpError("Updating place failed, please try again later.", 500));
 	}
 	updatedPlace = updatedPlace.toObject({ getters: true });
-	res.status(200).json({ place: updatedPlace.toObject({ getters: true }) });
+	res.status(200).json({ place: updatedPlace });
 };
 
 const deletePlace = async (req, res, next) => {
 	const placeId = req.params.placeId;
 	let place;
+
 	try {
 		place = await Place.findById(placeId).populate("creator");
 		if (!place) {
@@ -141,16 +142,19 @@ const deletePlace = async (req, res, next) => {
 	try {
 		const session = await mongoose.startSession();
 		session.startTransaction();
-		await place.remove({ session });
+
+		await Place.findByIdAndDelete(placeId, { session });
 		place.creator.places.pull(place);
 		await place.creator.save({ session });
+
 		await session.commitTransaction();
 	} catch (err) {
+		console.error("Delete error:", err);
 		return next(new HttpError("Deleting place failed, please try again later.", 500));
 	}
+
 	res.status(200).json({ message: "Place deleted" });
 };
-
 exports.getAllPlaces = getAllPlaces;
 exports.getPlaceById = getPlaceById;
 exports.getPlacesByUserId = getPlacesByUserId;

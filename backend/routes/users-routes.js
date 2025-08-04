@@ -9,11 +9,7 @@ router.get("/", (req, res, next) => usersController.getUsers(req, res, next));
 
 router.post(
 	"/signup",
-	[
-		check("username").not().isEmpty(),
-		check("email").normalizeEmail().isEmail(),
-		check("password").isLength({ min: 6 }),
-	],
+	[check("name").not().isEmpty(), check("email").normalizeEmail().isEmail(), check("password").isLength({ min: 6 })],
 	(req, res, next) => usersController.signup(req, res, next)
 );
 

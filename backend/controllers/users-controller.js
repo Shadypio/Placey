@@ -22,7 +22,7 @@ const signup = async (req, res, next) => {
 		return next(new HttpError("Invalid inputs passed, please check your data again.", 422));
 	}
 
-	const { username, email, password } = req.body;
+	const { name, email, password } = req.body;
 	let existingUser;
 	try {
 		existingUser = await User.findOne({ email: email });
@@ -35,7 +35,7 @@ const signup = async (req, res, next) => {
 	}
 
 	const createdUser = new User({
-		username,
+		name,
 		email,
 		password,
 		image: "https://placehold.co/600x400", // Placeholder for user image
