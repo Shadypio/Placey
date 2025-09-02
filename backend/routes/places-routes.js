@@ -5,6 +5,8 @@ const placesController = require("../controllers/places-controller");
 
 const router = express.Router();
 
+const fileUpload = require("../middleware/file-upload");
+
 router.get("/", (req, res, next) => placesController.getAllPlaces(req, res, next));
 
 router.get("/:placeId", (req, res, next) => placesController.getPlaceById(req, res, next));
@@ -13,6 +15,7 @@ router.get("/user/:uid", (req, res, next) => placesController.getPlacesByUserId(
 
 router.post(
 	"/",
+	fileUpload.single("image"),
 	[
 		check("title").not().isEmpty(),
 		check("description").isLength({ min: 5 }),

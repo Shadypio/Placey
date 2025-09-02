@@ -38,7 +38,7 @@ const signup = async (req, res, next) => {
 		name,
 		email,
 		password,
-		image: "https://placehold.co/600x400", // Placeholder for user image
+		image: req.file.path,
 		places: [],
 	});
 

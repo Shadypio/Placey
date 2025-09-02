@@ -6,6 +6,7 @@ const Place = require("../models/place");
 const User = require("../models/user");
 const mongoose = require("mongoose");
 
+const fs = require("fs");
 const getCoordsForAddress = require("../util/location").getCoordsForAddress;
 
 const getAllPlaces = async (req, res, next) => {
@@ -72,7 +73,7 @@ const createPlace = async (req, res, next) => {
 	const createdPlace = new Place({
 		title,
 		description,
-		imageUrl: "https://placehold.co/600x400", // Placeholder image URL
+		imageUrl: req.file.path,
 		address,
 		location: coordinates,
 		creator,
@@ -139,6 +140,8 @@ const deletePlace = async (req, res, next) => {
 		return next(new HttpError("Deleting place failed, please try again later.", 500));
 	}
 
+	const imagePath = place.image;
+
 	try {
 		const session = await mongoose.startSession();
 		session.startTransaction();
@@ -153,8 +156,10 @@ const deletePlace = async (req, res, next) => {
 		return next(new HttpError("Deleting place failed, please try again later.", 500));
 	}
 
+	fs.unlink(imagePath, err => {});
 	res.status(200).json({ message: "Place deleted" });
 };
+
 exports.getAllPlaces = getAllPlaces;
 exports.getPlaceById = getPlaceById;
 exports.getPlacesByUserId = getPlacesByUserId;

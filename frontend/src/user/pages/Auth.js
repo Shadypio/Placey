@@ -13,6 +13,7 @@ import { AuthContext } from "../../shared/context/auth-context";
 import ErrorModal from "../../shared/components/UIElements/ErrorModal";
 import LoadingSpinner from "../../shared/components/UIElements/LoadingSpinner";
 import { useHttpClient } from "../../shared/hooks/http-hook";
+import ImageUpload from "../../shared/components/FormElements/ImageUpload";
 
 const Auth = () => {
   const auth = useContext(AuthContext);
@@ -49,6 +50,7 @@ const Auth = () => {
             value: "",
             isValid: false,
           },
+          image: { value: null, isValid: false },
         },
         false,
       );
@@ -57,20 +59,13 @@ const Auth = () => {
   };
 
   const authSubmitHandler = async (event) => {
-    console.log("Handler called with event:", event);
-
     if (!event || !event.preventDefault) {
-      console.log("No event or preventDefault - returning early");
       return;
     }
 
     event.preventDefault();
 
-    console.log("Form is valid:", formState.isValid);
-    console.log("Is login mode:", isLoginMode);
-
     if (!formState.isValid) {
-      console.log("Form is invalid - returning");
       return;
     }
     if (isLoginMode) {
@@ -86,12 +81,13 @@ const Auth = () => {
         return;
       }
     } else {
+      const formData = new FormData();
+      formData.append("email", formState.inputs.email.value);
+      formData.append("name", formState.inputs.name.value);
+      formData.append("password", formState.inputs.password.value);
+      formData.append("image", formState.inputs.image.value);
       try {
-        await sendRequest("/users/signup", "POST", {
-          name: formState.inputs.name.value,
-          email: formState.inputs.email.value,
-          password: formState.inputs.password.value,
-        });
+        await sendRequest("/users/signup", "POST", formData, {}, false);
 
         auth.login();
       } catch (err) {
@@ -118,6 +114,9 @@ const Auth = () => {
             errorText="Please enter a valid name."
             onInput={inputHandler}
           />
+        )}
+        {!isLoginMode && (
+          <ImageUpload center id="image" onInput={inputHandler} />
         )}
         <Input
           id="email"
