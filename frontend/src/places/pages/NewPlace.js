@@ -1,4 +1,4 @@
-import React, { useCallback, useReducer, useContext } from "react";
+import React, { useContext } from "react";
 import "./PlaceForm.css";
 import Input from "../../shared/components/FormElements/Input";
 import Button from "../../shared/components/FormElements/Button";
@@ -52,7 +52,15 @@ const NewPlace = () => {
       formData.append("address", formState.inputs.address.value);
       formData.append("creator", auth.userId);
       formData.append("image", formState.inputs.image.value);
-      await sendRequest("/places", "POST", formData, {}, false);
+      await sendRequest(
+        "/places",
+        "POST",
+        formData,
+        {
+          Authorization: "Bearer " + auth.token,
+        },
+        false,
+      );
       history.push(`/${auth.userId}/places`);
     } catch (err) {
       console.error(err);

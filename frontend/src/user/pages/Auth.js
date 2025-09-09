@@ -75,7 +75,7 @@ const Auth = () => {
           password: formState.inputs.password.value,
         });
 
-        auth.login(responseData.user.id);
+        auth.login(responseData.userId, responseData.token);
       } catch (err) {
         console.error(err);
         return;

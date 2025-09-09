@@ -117,6 +117,11 @@ const updatePlace = async (req, res, next) => {
 		if (!updatedPlace) {
 			return next(new HttpError("Place not found", 404));
 		}
+
+		if (updatedPlace.creator.toString() !== req.userData.userId) {
+			return next(new HttpError("You are not allowed to edit this place.", 401));
+		}
+
 		updatedPlace.title = title;
 		updatedPlace.description = description;
 		updatedPlace.save();
@@ -138,6 +143,10 @@ const deletePlace = async (req, res, next) => {
 		}
 	} catch (err) {
 		return next(new HttpError("Deleting place failed, please try again later.", 500));
+	}
+
+	if (place.creator.id !== req.userData.userId) {
+		return next(new HttpError("You are not allowed to delete this place.", 401));
 	}
 
 	const imagePath = place.image;

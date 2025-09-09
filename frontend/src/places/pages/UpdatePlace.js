@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import { useParams, useHistory } from "react-router-dom";
 
 import Input from "../../shared/components/FormElements/Input";
@@ -13,8 +13,10 @@ import Card from "../../shared/components/UIElements/Card";
 import { useHttpClient } from "../../shared/hooks/http-hook";
 import ErrorModal from "../../shared/components/UIElements/ErrorModal";
 import LoadingSpinner from "../../shared/components/UIElements/LoadingSpinner";
+import { AuthContext } from "../../shared/context/auth-context";
 
 const UpdatePlace = () => {
+  const auth = useContext(AuthContext);
   const { isLoading, sendRequest, error, clearError } = useHttpClient();
   const [loadedPlace, setLoadedPlace] = useState();
   const placeId = useParams().placeId;
@@ -62,10 +64,17 @@ const UpdatePlace = () => {
   const placeUpdateSubmitHandler = async (event) => {
     event.preventDefault();
     try {
-      await sendRequest(`/places/${placeId}`, "PATCH", {
-        title: formState.inputs.title.value,
-        description: formState.inputs.description.value,
-      });
+      await sendRequest(
+        `/places/${placeId}`,
+        "PATCH",
+        {
+          title: formState.inputs.title.value,
+          description: formState.inputs.description.value,
+        },
+        {
+          Authorization: "Bearer " + auth.token,
+        },
+      );
       history.push(`/${placeId}`);
     } catch (err) {
       console.error(err);
